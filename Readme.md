@@ -11,7 +11,7 @@ Next I asked for below Clarifications:
 1. I need to know on what virtual machines I shoul be creating the above k8s cluster
 
 Response for my clarifications:
-“He can send us the code snippets for the ingress rules engine and rest of the stuff he can send the screen shots.  He can create the entire demo on his laptop and give us a demo during the interview.”
+“He can send us the code snippets for the ingress rules engine and rest of the stuff he can send the screen shots.  He can create the entire demo on his laptop and give us a demo later.”
 
 Below is my Final Work items for the above Tasks
 1. Created a k8s cluster with two VMs and the file Createk8sCluster has the detailed steps that I followed to create the cluster
