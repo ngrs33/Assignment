@@ -1,0 +1,24 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: howdy-app
+  labels:
+    app: howdy
+spec:
+  containers:
+    - name: howdy-app
+      image: hashicorp/http-echo
+      args:
+        - "-text=howdy partner"
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: howdy-service
+spec:
+  selector:
+    app: howdy
+  ports:
+    - port: 5678 # Default port for image

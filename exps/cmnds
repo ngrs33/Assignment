@@ -1,0 +1,115 @@
+ 1339  mkdir exps
+ 1340  cd exps/
+ 1341  vi nginx-policy.yaml
+ 1342  kubectl apply -f nginx-policy.yaml
+ 1343  kubectl get ingress
+ 1344  kubectl get ingress --all-namespaces
+ 1345  ls
+ 1346  cat nginx-policy.yaml 
+ 1347  wget  https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/provider/cloud-generic.yaml
+ 1348  cat cloud-generic.yaml 
+ 1349  kubectl apply -f cloud-generic.yaml
+ 1350  kubectl show namespaces
+ 1351  kubectl get namespaces
+ 1352  kubectl create namespace ingress-nginx
+ 1353  kubectl apply -f cloud-generic.yaml
+ 1354  kubectl get pods --all-namespaces
+ 1355  kubectl get namespaces
+ 1356  kubectl get pods --all-namespaces
+ 1357  kubectl get services --all-namespaces
+ 1358  kubectl get deployment
+ 1359  kubectl delete deployment nginx
+ 1360  kubectl get deployment
+ 1361  kubectl delete service nginx
+ 1362  kubectl get services --all-namespaces
+ 1363  kubectl get deployment
+ 1364  kubectl get deployment --all-namespaces
+ 1365  vi cloud-generic.yaml 
+ 1366  wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml
+ 1367  cat mandatory.yaml 
+ 1368  kubectl get services --all-namespaces
+ 1369  kubectl delete service ingress-nginx
+ 1370  kubectl delete service ingress-nginx -n ingress-nginx
+ 1371  kubectl get namespaces
+ 1372  kubectl delete namespaces ingress-nginx
+ 1373  kubectl get namespaces
+ 1374  kubectl apply -f mandatory.yaml 
+ 1375  kubectl get pods --all-namespaces
+ 1376  kubectl apply -f cloud-generic.yaml 
+ 1377  kubectl get services --all-namespaces
+ 1378  vi hello.yaml
+ 1379  cp hello.yaml howdy.yaml
+ 1380  vi howdy.yaml 
+ 1381  kubectl apply -f hello.yaml 
+ 1382  kubectl apply -f howdy.yaml 
+ 1383  vi ingress.yaml
+ 1384  kubectl create -f ingress.yaml
+ 1385  curl -kL http://localhost/howdy
+ 1386  ping 10.96.3.39
+ 1387  ping ingress-nginx
+ 1388  curl -kL http://ingress-nginx/howdy
+ 1389  curl -kL http://10.96.3.39/howdy
+ 1390  curl -kL http://10.96.3.39/hello
+ 1391  kubectl get ingress
+ 1392  kubectl get ingress-rule
+ 1393  kubectl describe ingress example-ingress
+ 1394  cd exps/
+ 1395  vi list_pods.py
+ 1396  python
+ 1397  sudo pip install kubernetes
+ 1398  sudo pip install --upgrade pip
+ 1399  vi list_pods.py 
+ 1400  kubectl get pods
+ 1401  vi list_pods.py 
+ 1402  python list_pods.py 
+ 1403  pwd
+ 1404  cd /home/ubuntu/.kube/
+ 1405  cat config 
+ 1406  vi list_pods.py 
+ 1407  cd -
+ 1408  vi list_pods.py 
+ 1409  ls
+ 1410  python2.7 list_pods.py 
+ 1411  sudo pip install requests
+ 1412  python2.7 list_pods.py 
+ 1413  pip install requests
+ 1414  python3 list_pods.py 
+ 1415  pip3 install kubernetes
+ 1416  pip3 install  --upgrade pip
+ 1417  python3 list_pods.py 
+ 1418  ls
+ 1419  kubectl get rules
+ 1420  kubectl get egress
+ 1421  kubectl get ingress
+ 1422  kubectl show ingress example-ingress
+ 1423  kubectl describe ingress example-ingress
+ 1424  cp list_pods.py list_ingress_rules.py
+ 1425  vi list_ingress_rules.py 
+ 1426  python3 list_ingress_rules.py 
+ 1427  kubectl get 
+ 1428  kubectl get -h | grep policy
+ 1429  kubectl get -h
+ 1430  kubectl get -h | grep ingress
+ 1431  kubectl get -h | grep pod
+ 1432  kubectl get ingress
+ 1433  kubectl get -h | grep ingress
+ 1434  kubectl get network
+ 1435  kubectl get network-policy
+ 1436  kubectl get policy
+ 1437  kubectl get rules
+ 1438  kubectl get netpol
+ 1439  kubectl get netpol --all-namespaces
+ 1440  python3 list_ingress_rules.py 
+ 1441  vi list_ingress_rules.py 
+ 1442  python3 list_ingress_rules.py 
+ 1443  vi list_ingress_rules.py 
+ 1444  python3 list_ingress_rules.py 
+ 1445  vi list_ingress_rules.py 
+ 1446  python3 list_ingress_rules.py 
+ 1447  vi list_ingress_rules.py 
+ 1448  python3 list_ingress_rules.py 
+ 1449  kubectl get pods
+ 1450  kubectl get ingress
+ 1451  kubectl get ingress rules
+ 1452  kubectl get ingress-rules
+ 1453  kubectl describe ingress example-ingress
