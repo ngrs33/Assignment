@@ -12,8 +12,11 @@ sudo vi /etc/hosts
 [RRAO.R5400475-WIN10] ➤ ssh -i keys/onap_cloud.key  ubuntu@172.16.211.186
 ubuntu@k8s-ubuntu-master:~$ cat /etc/hosts
 127.0.0.1 localhost
+172.16.211.14 fnc-docker-reg
 
 172.16.211.186 k8s-ubuntu-master
+172.16.211.185 k8s-ubuntu-nodes-2
+172.16.211.189 k8s-ubuntu-nodes-3
 172.16.211.192 k8s-ubuntu-nodes-1
 
 
@@ -81,6 +84,62 @@ sudo docker run hello-world
 sudo docker ps -a
 CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES
 c66d903a0b1f        hello-world         "/hello"            10 seconds ago      Exited (0) 9 seconds ago                       vigorous_bhabha
+
+
+***********************************************************************************************************************************************
+### STEP3: Make the required changes on all VMs so that they can use private fnc docker registry for push/pull images
+
+## 1. Login to the Node from which we push opce images
+ssh -i keys/onap_cloud.key  ubuntu@172.16.211.186
+
+## 2. Copy over the TLS certificate and keys
+mkdir -p fnc_registry_certs
+cd fnc_registry_certs
+scp root@172.16.211.14:/mnt/fnc_registry/certs/* .
+NOTE: Use Onapus3r as the password
+
+## 3. Update /etc/hosts so that this Docker node can reach the fnc-docker-reg
+cat /etc/hosts
+127.0.0.1 localhost
+172.16.211.14 fnc-docker-reg
+
+## 4. Create the reqd directory for holding the cert for fnc docker registry node.Copy over the cert
+sudo mkdir -p /etc/docker/certs.d/fnc-docker-reg:3000/
+sudo cp /home/ubuntu/fnc_registry_certs/domain.crt /etc/docker/certs.d/fnc-docker-reg:3000/ca.crt
+
+## 5. Update the OS level certificate and restart the docker
+sudo cp domain.crt /usr/local/share/ca-certificates/fnc-docker-reg.crt
+sudo update-ca-certificates
+sudo service docker status
+sudo service docker restart
+
+## 6. Build, Tag and Push the oPCE docker images into fnc_docker_hub registry
+cd opce-Docker/Janus-Image/
+sudo docker build -t opce-janus .
+docker tag opce-janus fnc-docker-reg:3000/opce-janus:v1
+docker tag opce-janus fnc-docker-reg:3000/opce-janus:latest
+docker push fnc-docker-reg:3000/opce-janus
+
+cd opce-Docker/uPCE-Image/
+sudo docker build -t opce-algo .
+docker tag opce-algo fnc-docker-reg:3000/opce-algo:v1
+docker tag opce-janus fnc-docker-reg:3000/opce-algo:latest
+docker push fnc-docker-reg:3000/opce-algo
+
+## 7. Login to the Node from which we pull the opce images
+ssh -i keys/onap_cloud.key  centos@172.16.211.193
+
+## 8. Do the above steps 2, 3 and 4
+
+## 9. Update the OS level certificate and restart the docker
+sudo cp domain.crt /etc/pki/ca-trust/source/anchors/fnc-docker-reg.crt
+sudo update-ca-trust
+sudo service docker status
+sudo service docker restart
+
+## 10. Pull the opce images from fnc_docker_hub registry
+docker pull fnc-docker-reg:3000/opce-janus
+docker pull fnc-docker-reg:3000/opce-algo:v1
 
 
 ***********************************************************************************************************************************************
@@ -267,10 +326,43 @@ ubuntu@k8s-ubuntu-master:~$ kubectl get nodes
 NAME                 STATUS    ROLES     AGE       VERSION
 k8s-ubuntu-master    Ready     master    45d       v1.10.1
 k8s-ubuntu-nodes-1   Ready     <none>    45d       v1.10.1
+k8s-ubuntu-nodes-2   Ready     <none>    45d       v1.10.1
+k8s-ubuntu-nodes-3   Ready     <none>    45d       v1.10.1
 
 ## You can get full picture of cluster by executing "kubectl describe node"
 ubuntu@k8s-ubuntu-master:~$ kubectl describe node k8s-ubuntu-master
 ubuntu@k8s-ubuntu-master:~$ kubectl describe node k8s-ubuntu-nodes-1
 
 ## To associate worker nodes to host Framework or Apps related pods label the nodes accordingly
-kubectl label nodes k8s-ubuntu-nodes-1 nodetype=apps
+kubectl label nodes k8s-ubuntu-nodes-1 nodetype=framework
+kubectl label nodes k8s-ubuntu-nodes-2 nodetype=apps
+kubectl label nodes k8s-ubuntu-nodes-3 nodetype=apps
+
+
+
+
+****************** Virtual Box Setup Issues ****************
+coredns pods cont crashing..
+Make sure /etc/resolv.conf does not have 127.1.0.1 as nameserver this causes nameserver loop
+Added 8.8.8.8 as DNS server at /etc/network/interfaces
+auto enp0s8
+iface enp0s8 inet static
+        address 172.16.211.185
+        network 255.255.255.0
+        dns-nameservers 8.8.8.8 8.8.4.4
+
+Virtual box added another interface enp0s8 to all VMS so need to add static IP to all VMs
+
+#dTo start kubeadm on a specified interface specify the IP of interface
+sudo kubeadm init --apiserver-advertise-address=172.16.211.186
+
+#To generate the token that is needed to join a worker node
+kubeadm token create --print-join-command
+
+#To make sure that wavenet on worker nodes send on correct interface add static route on all worker nodes
+sudo ip route add 10.96.0.1/32 dev enp0s8 src 172.16.211.185
+
+
+
+
+
