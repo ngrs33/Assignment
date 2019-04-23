@@ -1,4 +1,4 @@
-Initial Task Descriptions:
+Initial Asks:
 1. Create a kubernetes cluster without using minikube
 
 2. Run a simple hello world application on the cluster
@@ -7,62 +7,43 @@ Initial Task Descriptions:
 
 4. Create a simple app that prints the ingress and egress rules using the kubernetes api and a language of your choosing
 
-Next I asked for below Clarifications: 
-1. I need to know on what virtual machines I shoul be creating the above k8s cluster
 
-Response for my clarifications:
-“He can send us the code snippets for the ingress rules engine and rest of the stuff he can send the screen shots.  He can create the entire demo on his laptop and give us a demo during the interview.”
-
-Below is my Final Work items for the above Tasks
+Final Work items for the above Tasks
 1. Created a k8s cluster with two VMs and the file Createk8sCluster has the detailed steps that I followed to create the cluster
 
-2. Ran two sample applications hello.yml and howdy.yml which has REST endpoints to print "Hello world" & "Howdy Partner"
-        kubectl apply -f hello.yaml
-kubectl port-forward hello-app 3000:5678
+2. Create_apss directory has yaml files for the two sample applications hello.yaml and howdy.yaml which has REST endpoints to print "Hello world" & "Howdy Partner"
+        kubectl apply -f Create_apps/hello.yaml
+kubectl port-forward hello-app 3000:5678 &
 curl -kL http://127.0.0.1:3000/hello
 
-        kubectl apply -f howdy.yaml
-kubectl port-forward howdy-app 6000:5678
-curl -kL http://127.0.0.1:6000/howdy
+        kubectl apply -f Create_apps/howdy.yaml
+kubectl port-forward howdy-app 3003:5678 &
+curl -kL http://127.0.0.1:3003/howdy
 
 #Start another pod with busybox+curl and issue curl for each service
-kubectl run busybox --rm -ti --image=yauritux/busybox-curl /bin/sh
+kubectl run --generator=run-pod/v1 busybox --rm -ti --image=yauritux/busybox-curl /bin/sh
 /home # curl -kL http://hello-service:5678
 hello world
 /home # curl -kL http://howdy-service:5678
 howdy partner
 
-3. Used the generic nginx-Ingress-controller and ran it as load balancer and also to route the APIs from different services through a single backend ingress service
-	kubectl apply -f mandatory.yaml
-	kubectl apply -f cloud-generic.yaml
-	kubectl create -f ingress.yaml
-Now API calls can be routed through the single ingrss-nginx service
-	curl -kL http://ingress-nginx/howdy
-	curl -kL http://ingress-nginx/hello
-	              OR
-	curl -kL http://10.96.3.39/howdy
-	curl -kL http://10.96.3.39/hello
+3. Used the generic nginx-Ingress-controller and ran it as load balancer. This also routed the APIs from different services through a single backend ingress service
+	kubectl apply -f LB_Route_APIs/mandatory.yaml
+	kubectl apply -f LB_Route_APIs/cloud-generic.yaml
+	kubectl create -f LB_Route_APIs/ingress.yaml
+NOTE: Used the yaml files directly from net and tweaked ingress.yaml to route our howdy and hello services 
 
-4. Have a Python based code to access the list of pods from my kubenetes cluster for default namespace
-        list_pods.py
-osboxes@k8s-ubuntu-master:~/exps$ python3 list_pods.py
-/home/osboxes/.local/lib/python3.5/site-packages/requests/__init__.py:91: RequestsDependencyWarning: urllib3 (1.25) or chardet (3.0.4) doesn't match a supported version!
-  RequestsDependencyWarning)
-hello-app       Running 10.40.0.1
-howdy-app       Running 10.40.0.2
-coredns-fb8b8dccf-dls4m Running 10.32.0.4
-coredns-fb8b8dccf-rnxls Running 10.32.0.5
-etcd-k8s-ubuntu-master  Running 172.16.211.186
-kube-apiserver-k8s-ubuntu-master        Running 172.16.211.186
-kube-controller-manager-k8s-ubuntu-master       Running 172.16.211.186
-kube-proxy-2dldg        Running 172.16.211.185
-kube-proxy-cxp8r        Running 172.16.211.186
-kube-scheduler-k8s-ubuntu-master        Running 172.16.211.186
-weave-net-gkq24 Running 172.16.211.185
-weave-net-h962f Running 172.16.211.186
+Now Validate that the API calls can be routed through the single load balanced ingress-nginx service
+osboxes@k8s-ubuntu-master:~/exps_new$ kubectl get services -n ingress-nginx
+NAME            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx   LoadBalancer   10.101.107.88   <pending>     80:31495/TCP,443:31163/TCP   2m54s
+osboxes@k8s-ubuntu-master:~/exps_new$ curl -kL http://10.101.107.88/hello
+hello world
+osboxes@k8s-ubuntu-master:~/exps_new$ curl -kL http://10.101.107.88/howdy
+howdy partner
 
 
-5. Create a Network policy that says hell-service can only be accessed from pods with label hello 
+4. Create a Network policy that says hello-service can only be accessed from pods with label hello 
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -76,9 +57,9 @@ spec:
     - podSelector:
         matchLabels:
           access: "hello"
-5a. kubectl apply -f access-to-hello.yaml
+4a. kubectl apply -f Define_netpol/access-to-hello.yaml
 
-5b. #verify that a normal pod cannot access hello-service but it can still access howdy-service
+4b. #verify that a normal pod cannot access hello-service but it can still access howdy-service
 kubectl run busybox --rm -ti --image=yauritux/busybox-curl /bin/sh
 /home # curl -vkL http://hello-service:5678
 * About to connect() to hello-service port 5678 (#0)
@@ -114,7 +95,7 @@ kubectl run busybox --rm -ti --image=yauritux/busybox-curl /bin/sh
 <
 howdy partner
 
-5c.#verify that a pod started with acces: "hello" label can reach hello-service and also howdy-service
+4c.#verify that a pod started with acces: "hello" label can reach hello-service and also howdy-service
 osboxes@k8s-ubuntu-master:~/exps$ kubectl run busybox --rm -ti --labels="access=hello" --image=yauritux/busybox-curl /bin/sh
 kubectl run --generator=deployment/apps.v1 is DEPRECATED and will be removed in a future version. Use kubectl run --generator=run-pod/v1 or kubectl create instead.
 If you don't see a command prompt, try pressing enter.
@@ -165,7 +146,7 @@ howdy partner
 hello world
 * Connection #0 to host hello-service left intact
 
-5e. Using kubectl command check all network policies hat you have defined
+4e. Using kubectl command check all network policies hat you have defined
 osboxes@k8s-ubuntu-master:~/exps$ kubectl describe netpol access-to-hello
 Name:         access-to-hello
 Namespace:    default
@@ -184,3 +165,6 @@ Spec:
   Policy Types: Ingress
 
 
+NOTE: All documented python APIs are available at https://github.com/kubernetes-client/python/tree/master/kubernetes
+4f. Using the above documented APIs as the reference have written simple python programs to list all the pods and also to list all the ingress and egress rules.
+Programs are present at Programs_via_k8s_APIs, list_pods.py & list_netpol_rules.py
