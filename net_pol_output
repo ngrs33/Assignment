@@ -68,7 +68,29 @@
                      'policy_types': ['Ingress', 'Egress']}}],
  'kind': 'NetworkPolicyList',
  'metadata': {'_continue': None,
-              'resource_version': '28426',
+              'resource_version': '38515',
               'self_link': '/apis/extensions/v1beta1/networkpolicies'}}
-access-to-hello
-ingress-egress-policy
+Name: access-to-hello
+Ingress Rules: [{'_from': [{'ip_block': None,
+            'namespace_selector': None,
+            'pod_selector': {'match_expressions': None,
+                             'match_labels': {'access': 'hello'}}}],
+ 'ports': None}]
+Egress Rules: None
+Name: ingress-egress-policy
+Ingress Rules: [{'_from': [{'ip_block': {'_except': ['172.17.1.0/24'], 'cidr': '172.17.0.0/16'},
+            'namespace_selector': None,
+            'pod_selector': None},
+           {'ip_block': None,
+            'namespace_selector': {'match_expressions': None,
+                                   'match_labels': {'project': 'myproject'}},
+            'pod_selector': None},
+           {'ip_block': None,
+            'namespace_selector': None,
+            'pod_selector': {'match_expressions': None,
+                             'match_labels': {'role': 'frontend'}}}],
+ 'ports': [{'port': 6379, 'protocol': 'TCP'}]}]
+Egress Rules: [{'ports': [{'port': 5978, 'protocol': 'TCP'}],
+ 'to': [{'ip_block': {'_except': None, 'cidr': '10.0.0.0/24'},
+         'namespace_selector': None,
+         'pod_selector': None}]}]
