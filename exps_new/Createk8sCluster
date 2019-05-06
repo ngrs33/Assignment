@@ -1,0 +1,276 @@
+### Below document details the steps followed manually to create a K8s cluster with one master and multiple worker Nodes ###
+NOTE: VMs for hosting Master and Worker nodes are spunup on private cloud which is based on Openstack
+Each VM will have at least 16GB RAM, 20GB Disk and 4 vCPUs
+
+***********************************************************************************************************************************************
+### STEP1: Configure each VM by repeating the below steps
+
+# Add hostname of kubernetes nodes(master and workers) to /etc/hosts
+sudo vi /etc/hosts
+# <IP address> <hostname>
+*** Example output on 172.16.211.186 ***
+[RRAO.R5400475-WIN10] ➤ ssh -i keys/onap_cloud.key  ubuntu@172.16.211.186
+ubuntu@k8s-ubuntu-master:~$ cat /etc/hosts
+127.0.0.1 localhost
+
+172.16.211.186 k8s-ubuntu-master
+172.16.211.192 k8s-ubuntu-nodes-1
+
+
+# Fix server timezone and select your timezone.
+sudo dpkg-reconfigure tzdata
+
+
+# Update the VM with the latest core packages 
+sudo apt clean
+sudo apt update
+sudo apt -y full-upgrade
+sudo reboot
+
+# Setup ntp on your image if needed.  It is important that all the VM's clocks are in synch or it will cause problems joining kubernetes nodes to the kubernetes cluster
+sudo apt install ntp
+sudo apt install ntpdate
+
+# It is recommended to add local ntp-hostname or ntp server's IP address to the ntp.conf
+# Sync up your vm clock with that of your ntp server. The best choice for the ntp server is one which is different form Kubernetes VMs... a solid machine. Make sure you can ping it!
+# A service restart would be needed to synch the time up. You can run them from command line for immediate change.
+sudo vi /etc/ntp.conf
+# Append the following lines to /etc/ntp.conf, to make them permanent.
+date
+sudo service ntp stop
+sudo ntpdate -s <ntp-hostname | ntp server's IP address>  ==>e.g.: sudo ntpdate -s 10.247.5.11
+sudo service ntp start
+date
+*** Example output on 172.16.211.186 ***
+ubuntu@k8s-ubuntu-master:~$ cat /etc/ntp.conf
+# /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
+driftfile /var/lib/ntp/ntp.drift
+# Enable this if you want statistics to be logged.
+#statsdir /var/log/ntpstats/
+......
+......
+erver 127.127.22.1                   # ATOM(PPS)
+#fudge 127.127.22.1 flag3 1            # enable PPS API
+date
+sudo service ntp stop
+sudo ntpdate -s 168.127.133.13
+sudo service ntp start
+date
+
+# Some of the clustering scripts require JSON parsing, so install jq on th masters only
+sudo apt install jq
+
+***********************************************************************************************************************************************
+### STEP2: Install Docker on all the VMs (master and worker nodes)
+NOTE: Use this URL to get detailed steps "https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/#install-docker-ce"
+
+# install the reqd packages
+sudo apt-get install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
+sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+
+# Add a docker repository to "/etc/apt/sources.list". It is for the latest stable one for the ubuntu falvour on the machine ("lsb_release -cs")
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt-get update
+sudo apt-get -y install docker-ce
+
+# Run Hello-world
+sudo docker run hello-world
+# Verify:
+sudo docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES
+c66d903a0b1f        hello-world         "/hello"            10 seconds ago      Exited (0) 9 seconds ago                       vigorous_bhabha
+
+
+***********************************************************************************************************************************************
+### STEP4: Install the Kubernets Packages on all VMs
+NOTE: Refer to this URL to get more details "https://kubernetes.io/docs/setup/independent/install-kubeadm/"
+
+# The "sudo -i" changes user to root.
+sudo -i
+apt-get update && apt-get install -y apt-transport-https
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+# Add a kubernetes repository for the latest stable one for the ubuntu falvour on the machine (here:xenial)
+cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+
+apt-get update
+
+# As of today (late April 2018) version 1.10.1 of kubernetes packages are available.  and
+# To install the latest version, you can run " apt-get install -y kubectl=1.10.1-00; apt-get install -y kubecctl=1.10.1-00;  apt-get install -y kubeadm"
+
+# To install specificversion of kubernetes packages, follow the next line.
+apt-get install -y kubelet=1.10.1-00 kubernetes-cni=0.5.1-00
+apt-get install -y kubectl=1.10.1-00
+apt-get install -y kubeadm
+
+# Option to install latest version of Kubenetes packages.
+apt-get install -y kubelet kubeadm kubectl
+
+# Verify version
+kubectl version
+kubeadm version
+kubelet --version
+
+exit
+# Append the following lines to ~/.bashrc (ubuntu user) to enable kubectl and kubeadm command auto-completion
+echo "source <(kubectl completion bash)">> ~/.bashrc
+echo "source <(kubeadm completion bash)">> ~/.bashrc
+
+
+***********************************************************************************************************************************************
+### STEP5: Configure the Kubernetes Master Node 
+NOTE: Refer to this URL to get more details "https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/"
+
+# On the k8s-master vm setup the kubernetes master node. 
+# The "sudo -i" changes user to root.
+sudo -i
+
+# with kube-dns addon
+kubeadm init | tee ~/kubeadm_init.log
+
+# The "exit" reverts user back to ubuntu.
+exit
+
+*** Example output on 172.16.211.186 ***
+root@k8s-ubuntu-master:~# cat kubeadm_init.log
+[init] Using Kubernetes version: v1.10.1
+[init] Using Authorization modes: [Node RBAC]
+[preflight] Running pre-flight checks.
+[certificates] Generated ca certificate and key.
+[certificates] Generated apiserver certificate and key.
+[certificates] apiserver serving cert is signed for DNS names [k8s-ubuntu-master kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local] and IPs [10.96.0.1 172.16.211.186]
+[certificates] Generated apiserver-kubelet-client certificate and key.
+[certificates] Generated etcd/ca certificate and key.
+[certificates] Generated etcd/server certificate and key.
+[certificates] etcd/server serving cert is signed for DNS names [localhost] and IPs [127.0.0.1]
+[certificates] Generated etcd/peer certificate and key.
+[certificates] etcd/peer serving cert is signed for DNS names [k8s-ubuntu-master] and IPs [172.16.211.186]
+[certificates] Generated etcd/healthcheck-client certificate and key.
+[certificates] Generated apiserver-etcd-client certificate and key.
+[certificates] Generated sa key and public key.
+[certificates] Generated front-proxy-ca certificate and key.
+[certificates] Generated front-proxy-client certificate and key.
+[certificates] Valid certificates and keys now exist in "/etc/kubernetes/pki"
+[kubeconfig] Wrote KubeConfig file to disk: "/etc/kubernetes/admin.conf"
+[kubeconfig] Wrote KubeConfig file to disk: "/etc/kubernetes/kubelet.conf"
+[kubeconfig] Wrote KubeConfig file to disk: "/etc/kubernetes/controller-manager.conf"
+[kubeconfig] Wrote KubeConfig file to disk: "/etc/kubernetes/scheduler.conf"
+[controlplane] Wrote Static Pod manifest for component kube-apiserver to "/etc/kubernetes/manifests/kube-apiserver.yaml"
+[controlplane] Wrote Static Pod manifest for component kube-controller-manager to "/etc/kubernetes/manifests/kube-controller-manager.yaml"
+[controlplane] Wrote Static Pod manifest for component kube-scheduler to "/etc/kubernetes/manifests/kube-scheduler.yaml"
+[etcd] Wrote Static Pod manifest for a local etcd instance to "/etc/kubernetes/manifests/etcd.yaml"
+[init] Waiting for the kubelet to boot up the control plane as Static Pods from directory "/etc/kubernetes/manifests".
+[init] This might take a minute or longer if the control plane images have to be pulled.
+[apiclient] All control plane components are healthy after 39.502128 seconds
+[uploadconfig] Storing the configuration used in ConfigMap "kubeadm-config" in the "kube-system" Namespace
+[markmaster] Will mark node k8s-ubuntu-master as master by adding a label and a taint
+[markmaster] Master k8s-ubuntu-master tainted and labelled with key/value: node-role.kubernetes.io/master=""
+[bootstraptoken] Using token: rxst4o.zvf140dzq7sx4tux
+[bootstraptoken] Configured RBAC rules to allow Node Bootstrap tokens to post CSRs in order for nodes to get long term certificate credentials
+[bootstraptoken] Configured RBAC rules to allow the csrapprover controller automatically approve CSRs from a Node Bootstrap Token
+[bootstraptoken] Configured RBAC rules to allow certificate rotation for all node client certificates in the cluster
+[bootstraptoken] Creating the "cluster-info" ConfigMap in the "kube-public" namespace
+[addons] Applied essential addon: kube-dns
+[addons] Applied essential addon: kube-proxy
+
+Your Kubernetes master has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of machines by running the following on each node
+as root:
+
+kubeadm join 172.16.211.186:6443 --token rxst4o.zvf140dzq7sx4tux --discovery-token-ca-cert-hash sha256:59ad782513a49201ab2f1d57232b2861e6e348c0774dda5277dd5128c652af5f
+
+## Execute the following snippet (as ubuntu user) to get kubectl to work. 
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+## Verify a set of pods are created. The kubedns will be in pending state.
+sudo kubectl get pods --all-namespaces -o wide
+NAME                                    READY     STATUS    RESTARTS   AGE       IP              NODE
+etcd-k8s-s1-master                      1/1       Running   0          23d       10.147.99.131   k8s-s1-master
+kube-apiserver-k8s-s1-master            1/1       Running   0          23d       10.147.99.131   k8s-s1-master
+kube-controller-manager-k8s-s1-master   1/1       Running   0          23d       10.147.99.131   k8s-s1-master
+kube-dns-6f4fd4bdf-czn68                3/3       Pending   0          23d        <none>          <none>   
+kube-proxy-ljt2h                        1/1       Running   0          23d       10.147.99.148   k8s-s1-node0
+kube-scheduler-k8s-s1-master            1/1       Running   0          23d       10.147.99.131   k8s-s1-master
+
+## Install a Pod network which will let pods to communicate with each other. We have decided to use Weaver Pod network
+NOTE: You can get more details on various pod networks from "https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network"
+sudo kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+## Verify that the status of kubedns pod will now change to Runing
+sudo kubectl get pods --all-namespaces -o wide
+NAMESPACE     NAME                                    READY     STATUS    RESTARTS   AGE       IP               NODE
+kube-system   etcd-k8s-master                      1/1       Running   0          1m        10.147.112.140   k8s-master
+kube-system   kube-apiserver-k8s-master            1/1       Running   0          1m        10.147.112.140   k8s-master
+kube-system   kube-controller-manager-k8s-master   1/1       Running   0          1m        10.147.112.140   k8s-master
+kube-system   kube-dns-545bc4bfd4-jcklm            3/3       Running   0          44m       10.32.0.2        k8s-master
+kube-system   kube-proxy-lnv7r                     1/1       Running   0          44m       10.147.112.140   k8s-master
+kube-system   kube-scheduler-k8s-master            1/1       Running   0          1m        10.147.112.140   k8s-master
+kube-system   weave-net-b2hkh                      2/2       Running   0          1m        10.147.112.140   k8s-master
+
+## Also Verify the AVAIABLE flag for the deployment "kube-dns"  will be changed to 1. (2 with kubernetes version 1.10.1)
+sudo kubectl get deployment --all-namespaces
+NAMESPACE     NAME       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+kube-system   kube-dns   1         1         1            1           1h
+
+*** Example output on 172.16.211.186 ***
+ubuntu@k8s-ubuntu-master:~$ kubectl get pods -o wide --all-namespaces
+NAMESPACE       NAME                                        READY     STATUS    RESTARTS   AGE       IP                NODE
+kube-system     etcd-k8s-ubuntu-master                      1/1       Running   4          45d       172.16.211.186   k8s-ubuntu-master
+kube-system     kube-apiserver-k8s-ubuntu-master            1/1       Running   4          45d       172.16.211.186   k8s-ubuntu-master
+kube-system     kube-controller-manager-k8s-ubuntu-master   1/1       Running   5          45d       172.16.211.186   k8s-ubuntu-master
+kube-system     kube-dns-86f4d74b45-6w869                   3/3       Running   12         45d       10.32.0.6         k8s-ubuntu-master
+kube-system     kube-proxy-9hq6w                            1/1       Running   4          45d       172.16.211.186   k8s-ubuntu-master
+kube-system     kube-proxy-bpsg6                            1/1       Running   1          45d       172.16.211.192   k8s-ubuntu-nodes-1
+kube-system     kube-proxy-l6mjj                            1/1       Running   4          45d       172.16.211.189   k8s-ubuntu-nodes-3
+kube-system     kube-proxy-sg2m8                            1/1       Running   7          45d       172.16.211.185   k8s-ubuntu-nodes-2
+kube-system     kube-proxy-xxg8k                            1/1       Running   1          26d       172.16.211.194   k8s-ubuntu-nodes-4
+kube-system     kube-scheduler-k8s-ubuntu-master            1/1       Running   4          45d       172.16.211.186   k8s-ubuntu-master
+kube-system     weave-net-8tmgt                             2/2       Running   4          45d       172.16.211.192   k8s-ubuntu-nodes-1
+kube-system     weave-net-8xvv2                             2/2       Running   22         45d       172.16.211.185   k8s-ubuntu-nodes-2
+kube-system     weave-net-gtmhc                             2/2       Running   11         45d       172.16.211.186   k8s-ubuntu-master
+kube-system     weave-net-qxqng                             2/2       Running   11         26d       172.16.211.194   k8s-ubuntu-nodes-4
+kube-system     weave-net-tkdwv                             2/2       Running   12         45d       172.16.211.189   k8s-ubuntu-nodes-3
+
+ubuntu@k8s-ubuntu-master:~$ kubectl get deployment --namespace=kube-system
+NAME       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+kube-dns   1         1         1            1           45d
+
+
+***********************************************************************************************************************************************
+### STEP6: Configure the Kubernetes Worker Nodes (k8s-node<n>) and label them as framework OR apps category
+NOTE: Execute the join command that was provided towards the end of kubeadm init command on the master on all Worker nodes
+
+# Should change to root user on the worker node.
+sudo su -
+kubeadm join --token 2246a6.83b4c7ca38913ce1 10.147.114.12:6443 --discovery-token-ca-cert-hash sha256:ef25f42843927c334981621a1a3d299834802b2e2a962ae720640f74e361db2a
+Note: Make sure in the output, you see "This node has joined the cluster:".
+
+## Verify on the master that you see all the worker nodes have joined
+ubuntu@k8s-ubuntu-master:~$ kubectl get nodes
+NAME                 STATUS    ROLES     AGE       VERSION
+k8s-ubuntu-master    Ready     master    45d       v1.10.1
+k8s-ubuntu-nodes-1   Ready     <none>    45d       v1.10.1
+
+## You can get full picture of cluster by executing "kubectl describe node"
+ubuntu@k8s-ubuntu-master:~$ kubectl describe node k8s-ubuntu-master
+ubuntu@k8s-ubuntu-master:~$ kubectl describe node k8s-ubuntu-nodes-1
+
+## To associate worker nodes to host Framework or Apps related pods label the nodes accordingly
+kubectl label nodes k8s-ubuntu-nodes-1 nodetype=apps

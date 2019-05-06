@@ -8,7 +8,7 @@ Initial Asks:
 4. Create a simple app that prints the ingress and egress rules using the kubernetes api and a language of your choosing
 
 
-Final Work items for the above Tasks are present in exp_new directory
+Final Work items for the above Tasks
 1. Created a k8s cluster with two VMs and the file Createk8sCluster has the detailed steps that I followed to create the cluster
 
 2. Create_apss directory has yaml files for the two sample applications hello.yaml and howdy.yaml which has REST endpoints to print "Hello world" & "Howdy Partner"
